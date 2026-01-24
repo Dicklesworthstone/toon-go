@@ -248,6 +248,10 @@ func TestDetectFormat_JSON(t *testing.T) {
 		{`[]`, FormatJSON},
 		{`{}`, FormatJSON},
 		{`  {"spaces": "ok"}  `, FormatJSON},
+		{`"hello: world"`, FormatJSON},
+		{`123`, FormatJSON},
+		{`true`, FormatJSON},
+		{`null`, FormatJSON},
 	}
 
 	for _, tt := range tests {

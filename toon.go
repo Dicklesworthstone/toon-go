@@ -359,20 +359,15 @@ func DetectFormat(input string) Format {
 		return FormatUnknown
 	}
 
-	// JSON starts with { or [
-	if strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[") {
+	// Prefer JSON whenever the input is valid JSON (including scalars like "str", 123, true, null).
+	var js json.RawMessage
+	if json.Unmarshal([]byte(trimmed), &js) == nil {
 		return FormatJSON
 	}
 
 	// TOON has key: value or array[N] patterns
 	if strings.Contains(trimmed, ": ") || strings.Contains(trimmed, "[") && strings.Contains(trimmed, "]:") {
 		return FormatTOON
-	}
-
-	// Try to parse as JSON
-	var js json.RawMessage
-	if json.Unmarshal([]byte(input), &js) == nil {
-		return FormatJSON
 	}
 
 	return FormatTOON
