@@ -28,6 +28,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -99,21 +100,26 @@ func DefaultDecodeOptions() DecodeOptions {
 
 // findTruBinary locates the tru binary
 func findTruBinary() (string, error) {
-	// Check environment variables first
-	if bin := os.Getenv("TOON_TRU_BIN"); bin != "" {
-		if _, err := os.Stat(bin); err == nil {
-			return bin, nil
-		}
-	}
-	if bin := os.Getenv("TOON_BIN"); bin != "" {
-		if _, err := os.Stat(bin); err == nil {
-			return bin, nil
+	// Check environment variables first (accepts either a path OR a command name).
+	for _, env := range []string{"TOON_TRU_BIN", "TOON_BIN"} {
+		if raw := strings.TrimSpace(os.Getenv(env)); raw != "" {
+			path, err := resolveTruCandidate(raw)
+			if err == nil {
+				return path, nil
+			}
+			return "", &ToonError{
+				Code:    ErrCodeTruNotFound,
+				Message: fmt.Sprintf("%s=%q does not appear to be toon_rust (expected tru)", env, raw),
+				Cause:   err,
+			}
 		}
 	}
 
 	// Check PATH
 	if path, err := exec.LookPath("tru"); err == nil {
-		return path, nil
+		if isToonRustBinary(path) {
+			return path, nil
+		}
 	}
 
 	// Check common locations
@@ -124,15 +130,53 @@ func findTruBinary() (string, error) {
 		"/data/tmp/cargo-target/debug/tru",
 	}
 	for _, p := range commonPaths {
-		if _, err := os.Stat(p); err == nil {
+		if isToonRustBinary(p) {
 			return p, nil
 		}
 	}
 
 	return "", &ToonError{
 		Code:    ErrCodeTruNotFound,
-		Message: "tru binary not found. Install via: brew install dicklesworthstone/tap/tru or cargo install toon_rust",
+		Message: "tru binary not found. Install via: brew install dicklesworthstone/tap/tru OR https://github.com/Dicklesworthstone/toon_rust",
 	}
+}
+
+func resolveTruCandidate(raw string) (string, error) {
+	// If raw looks like a path, validate it directly.
+	if strings.ContainsAny(raw, `/\`) || filepath.IsAbs(raw) || strings.HasPrefix(raw, ".") {
+		if isToonRustBinary(raw) {
+			return raw, nil
+		}
+		return "", fmt.Errorf("candidate is not a valid toon_rust tru binary: %q", raw)
+	}
+
+	// Otherwise treat it as a command name and resolve via PATH.
+	path, err := exec.LookPath(raw)
+	if err != nil {
+		return "", err
+	}
+	if !isToonRustBinary(path) {
+		return "", fmt.Errorf("candidate is not a valid toon_rust tru binary: %q (resolved to %q)", raw, path)
+	}
+	return path, nil
+}
+
+func isToonRustBinary(path string) bool {
+	base := strings.ToLower(filepath.Base(path))
+	// Hard ban: Node.js `toon` CLI wrapper names.
+	if base == "toon" || base == "toon.exe" {
+		return false
+	}
+
+	helpOut, _ := exec.Command(path, "--help").CombinedOutput()
+	helpLower := strings.ToLower(string(helpOut))
+	if strings.Contains(helpLower, "reference implementation in rust") {
+		return true
+	}
+
+	verOut, _ := exec.Command(path, "--version").CombinedOutput()
+	verLower := strings.ToLower(strings.TrimSpace(string(verOut)))
+	return strings.HasPrefix(verLower, "tru ") || strings.HasPrefix(verLower, "toon_rust ")
 }
 
 // Available returns true if the tru binary is installed and accessible

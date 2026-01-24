@@ -18,8 +18,11 @@ This library requires the `tru` CLI binary to be installed:
 # macOS
 brew install dicklesworthstone/tap/tru
 
+# One-liner install script
+curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/toon_rust/main/install.sh" | bash
+
 # From source (requires Rust)
-cargo install toon_rust
+cargo install --git https://github.com/Dicklesworthstone/toon_rust --tag v0.1.1
 
 # Or download from GitHub releases
 # https://github.com/Dicklesworthstone/toon_rust/releases
@@ -146,8 +149,8 @@ if err != nil {
 
 ## Environment Variables
 
-- `TOON_TRU_BIN` - Path to tru binary (highest priority)
-- `TOON_BIN` - Alternate path to tru binary
+- `TOON_TRU_BIN` - Path or command name for `tru` (highest priority)
+- `TOON_BIN` - Alternate path/command name for `tru`
 
 ## TOON Format Example
 
