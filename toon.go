@@ -365,11 +365,7 @@ func DetectFormat(input string) Format {
 		return FormatJSON
 	}
 
-	// TOON has key: value or array[N] patterns
-	if strings.Contains(trimmed, ": ") || strings.Contains(trimmed, "[") && strings.Contains(trimmed, "]:") {
-		return FormatTOON
-	}
-
+	// Not valid JSON - treat as TOON (decode will fail if invalid)
 	return FormatTOON
 }
 
